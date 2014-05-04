@@ -4,7 +4,7 @@ import pyglet
 ##My first working lambda calculus interpreter. It passed its first test on Friday, March 2, 2014, at 23:53.
 
 window = pyglet.window.Window(resizable=True)
-
+pyglet.font.add_file('whitrabt.ttf')
 textdisplay = pyglet.text.Label(text="", font_name="White Rabbit", font_size=24, x=window.width/2, y=window.height/2, width=window.width, anchor_x="center", anchor_y="center", multiline=True)
 
 text = "--*m*n*f*x--mf--nfx*f*x-f-f-fx*g*y-g-gy"
