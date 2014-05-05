@@ -11,41 +11,49 @@ class Box:
     def update(self, x, y):
         self.x = x
         self.y = y
-        bottom = self.y-16
-        left = self.x-16
-        top = self.y+16
-        right = self.x+16
-        mtop = self.y+8
-        mbottom = self.y-8
-        mright = self.x+8
-        oright = right+4
         self.batch = pyglet.graphics.Batch()
-        self.g0 = pyglet.graphics.OrderedGroup(0)
-        self.g1 = pyglet.graphics.OrderedGroup(1)
-        self.square = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, self.g0, [0, 1, 2, 2, 0, 3],
-                ('v2i', (left, bottom, right, bottom, right, top, left, top)),
-                ('c3f', (1.0,)*12)
-                )
         if self.app == True:
-            self.s = self.batch.add_indexed(3, pyglet.gl.GL_TRIANGLES, self.g1, [0, 1, 2],
-                    ('v2i', (x, mbottom, mright, y, x, mtop)),
-                    ('c3f', (0.0,)*9)
+            left = self.x-12
+            right = self.x+12
+            bottom = self.y-6
+            top = self.y+6
+            self.s = self.batch.add_indexed(3, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2],
+                    ('v2i', (x, y-6, x+12, y+6, x-12, y+6)),
+                    ('c3f', (1.0,)*9)
                     )
+            self.leftattach = (x-6, y)
+            self.topattach = (x, y+6)
+            self.bottomattach = (x, y-6)
+            self.rightattach = (0, 0)
         else:
-            self.s = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, self.g1, [0, 1, 2, 2, 0, 3],
-                    ('v2i', (right, mbottom, oright, mbottom, oright, mtop, right, mtop)),
+            bottom = self.y-12
+            left = self.x-16
+            top = self.y+12
+            right = self.x+16
+            self.square = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2, 2, 0, 3],
+                    ('v2i', (left, bottom, right, bottom, right, top, left, top)),
                     ('c3f', (1.0,)*12)
                     )
-        self.topattach = (x, top)
-        self.leftattach = (left, y)
-        self.rightattach = (right, y)
-        self.bottomattach = (x, bottom)
+            self.s = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2, 2, 0, 3],
+                    ('v2i', (right, self.y-4, right+3, self.y-4, right+3, self.y+4, right, self.y+4)),
+                    ('c3f', (1.0,)*12)
+                    )
+            self.topattach = (x, top)
+            self.leftattach = (left, y)
+            self.rightattach = (right, y)
+            self.bottomattach = (x, bottom)
 
     def hover(self, state=False):
         if state == True:
             self.square.colors = (1.0, 0.0, 0.0)*4
         else:
             self.square.colors = (1.0,)*12
+
+    def checkhover(self, x, y):
+        if (x > self.x-16) and (x < self.x+16) and (y > self.y-16) and (y < self.y+16):
+            self.hover(True)
+        else:
+            self.hover(False)
 
 class AbstractorBox(Box):
 
@@ -59,7 +67,8 @@ class AbstractorBox(Box):
 
     def hover(self, state=False):
         Box.hover(self, state)
-        self.aline.hover(state)
+        if self.aline:
+            self.aline.hover(state)
 
     def draw(self):
         self.batch.draw()
@@ -80,8 +89,10 @@ class ApplicatorBox(Box):
 
     def hover(self, state=False):
         Box.hover(self, state)
-        self.inline.hover(state)
-        self.outline.hover(state)
+        if self.inline:
+            self.inline.hover(state)
+        if self.outline:
+            self.outline.hover(state)
 
     def draw(self):
         self.batch.draw()
@@ -117,6 +128,7 @@ l3 = Line(b1.topattach, a1.leftattach, a1)
 l4 = Line(b2.topattach, a1.rightattach, a1)
 b1.aline = l1
 b2.aline = l2
+drag = b2
 
 @window.event
 def on_draw():
@@ -125,8 +137,19 @@ def on_draw():
     l3.draw()
     l4.draw()
 
-#@window.event
-#def on_mouse_motion(x, y, dx, dy):
-#    b1.update(x, y)
+@window.event
+def on_mouse_motion(x, y, dx, dy):
+    b1.checkhover(x, y)
+    b2.checkhover(x, y)
+    a1.checkhover(x, y)
+
+@window.event
+def on_mouse_press(symbol, modifier, x, y):
+    pass
+
+@window.event
+def on_mouse_drag(x, y, dx, dy, symbol, modifier):
+    if drag:
+        drag.update(x, y)
 
 pyglet.app.run()
