@@ -86,56 +86,76 @@ class Box:
 class AbstractorBox(Box):
 
     def __init__(self, x, y):
-        self.app = False
+        self.topline = None
+        self.rightline = None
+        self.bottomline = None
         Box.__init__(self, x, y)
-        self.aline = None
-        s1, s2 = self.calc_s1_s2(24)
-
+        
     def get_vertices(self, centerx, centery):
         left = centerx-self.s2
         right = centerx+self.s1
         bottom = centery-self.s2
         top = centery+self.s1
-        return left, top, right, bottom, right, top
+        return Vector(right, bottom), Vector(right, top), Vector(left, top)
 
     def update(self, x, y):
         Box.update(self, x, y)
-        bottom = self.y-24
-        left = self.x-32
-        top = self.y+24
-        right = self.x+32
-        self.square = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2, 2, 0, 3],
-                ('v2i', (left, bottom, right, bottom, right, top, left, top)),
-                ('c3f', (1.0,)*12)
+        self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
+        self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
+                ('c4f', (1.0,)*12)
                 )
-        self.s = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2, 2, 0, 3],
-                ('v2i', (right, self.y-8, right+9, self.y-8, right+9, self.y+8, right, self.y+8)),
-                ('c3f', (1.0,)*12)
+        self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (a.x, a.y, b.x, b.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
                 )
-        self.topattach = (x, top)
-        self.leftattach = (left, y)
-        self.rightattach = (right, y)
-        self.bottomattach = (x, bottom)
+        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                )
+        self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (c.x, c.y, a.x, a.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                )
+        self.leftattach = (x-12, y)
+        self.topattach = (x, y+12)
+        self.bottomattach = (x, y-12)
+        self.rightattach = (0, 0)
 
     def hover(self, state=False):
         if state == True:
-            self.square.colors = (1.0, 0.0, 0.0)*4
+            self.triangle.colors = (1.0, 0.0, 0.0, 1.0)*3
         else:
-            self.square.colors = (1.0,)*12
-        if self.aline:
-            self.aline.hover(state)
+            self.triangle.colors = (1.0,)*12
 
     def draw(self):
         self.batch.draw()
-        if self.aline:
-            self.aline.draw()
 
     def checkhover(self, x, y):
-        if (x > self.x-32) and (x < self.x+32) and (y > self.y-32) and (y < self.y+32):
+        hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
+        if hover:
             self.hover(True)
+            lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
+            bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
+            righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+            if bottomhover:
+                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            if lefthover:
+                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            if righthover:
+                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
             return True
         else:
             self.hover(False)
+            self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
             return False
 
 class ApplicatorBox(Box):
