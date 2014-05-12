@@ -1,4 +1,48 @@
-import pyglet
+import pyglet, math
+
+class Vector:
+
+    def __init__(self, *args):
+        """Takes coordinates either as a tuple or separate"""
+        self.set(args)
+
+    def set(self, *args):
+        """Takes coordinates either as a tuple or separate"""
+        if len(args) == 1:
+            arg = args[0]
+            self.x = arg[0]
+            self.y = arg[1]
+        elif len(args) == 2:
+            self.x = args[0]
+            self.y = args[1]
+        else:
+            raise TypeError("Vector.__init__() takes either one or two arguments; "+len(args)+" given.")
+
+    def coords(self):
+        return self.x, self.y
+
+    def __add__(self, other):
+        if type(other) == type(self):
+            print "Hello"
+            t = Vector(self.x+other.x, self.y+other.y)
+            return None
+        else:
+            raise TypeError
+
+    def __sub__(self, other):
+        if type(other) == type(self):
+            return Vector(self.x-other.x, self.y-other.y)
+        else:
+            raise TypeError
+
+    def __repr__(self):
+        return "Vector ("+str(self.x)+", "+str(self.y)+")"
+
+    def __getitem__(self, i):
+        if i == 0:
+            return self.x
+        elif i == 1:
+            return self.y
 
 class Box:
 
@@ -6,7 +50,29 @@ class Box:
         self.x = x
         self.y = y
         self.lines = []#Lines this box is connected to
+        self.triangleconstant = math.tan(math.pi/8)/(math.tan(math.pi/8)+1)
+        self.calc_s1_s2(48)
         self.update(x, y)
+
+    def calc_s1_s2(self, width):
+        """s1 and s2 are lengths for calculating the corner coordinates from the center one"""
+        self.s1 = width*self.triangleconstant
+        self.s2 = width-self.s1
+
+    def point_in_triangle(self, p, a, b, x, y):
+        """p: position vector to a and b; a, b: vectors defining the triangle; x, y: coordinates of the point"""
+        ax, ay = a.coords()
+        ax = float(ax); ay = float(ay)
+        bx, by = b.coords()
+        bx = float(bx); by = float(by)
+        px = x-p[0]#do some conversion to port the mouse coordinates into a coordinate system based on the tip of the triangle
+        py = y-p[1]
+        r = (-py*bx/by+px)/(-ay*bx/by+ax)#calculate r and s values to represent the point by a and b
+        s = (px-r*ax)/bx
+        if r<1 and r>0 and s<1 and s>0 and (r+s)<1 and (r+s)>0:#standard point-in-triangle test
+            return True
+        else:
+            return False
 
     def update(self, x, y):
         self.x = x
@@ -23,6 +89,14 @@ class AbstractorBox(Box):
         self.app = False
         Box.__init__(self, x, y)
         self.aline = None
+        s1, s2 = self.calc_s1_s2(24)
+
+    def get_vertices(self, centerx, centery):
+        left = centerx-self.s2
+        right = centerx+self.s1
+        bottom = centery-self.s2
+        top = centery+self.s1
+        return left, top, right, bottom, right, top
 
     def update(self, x, y):
         Box.update(self, x, y)
@@ -67,62 +141,76 @@ class AbstractorBox(Box):
 class ApplicatorBox(Box):
 
     def __init__(self, x, y):
-        self.app = True
-        self.inline = None
-        self.outline = None
+        self.leftline = None
+        self.rightline = None
+        self.bottomline = None
         Box.__init__(self, x, y)
+        
+    def get_vertices(self, centerx, centery):
+        left = centerx-self.s1
+        right = centerx+self.s2
+        bottom = centery-self.s1
+        top = centery+self.s2
+        return Vector(left, top), Vector(left, bottom), Vector(right, bottom)
 
     def update(self, x, y):
         Box.update(self, x, y)
-        left = self.x-24
-        right = self.x+24
-        bottom = self.y-12
-        top = self.y+12
-        self.triangle = self.batch.add_indexed(3, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2],
-                ('v2i', (x, y-12, x+24, y+12, x-24, y+12)),
-                ('c3f', (1.0,)*9)
+        self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
+        self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
+                ('c4f', (1.0,)*12)
+                )
+        self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (a.x, a.y, b.x, b.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                )
+        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                )
+        self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (c.x, c.y, a.x, a.y, x, y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
                 )
         self.leftattach = (x-12, y)
         self.topattach = (x, y+12)
         self.bottomattach = (x, y-12)
         self.rightattach = (0, 0)
-        if self.inline:
-            self.inline.update_start(self.topattach[0], self.topattach[1])
-        elif self.outline:
-            self.outline.update_start(self.bottomattach[0], self.bottomattach[1])
 
     def hover(self, state=False):
         if state == True:
-            self.triangle.colors = (1.0, 0.0, 0.0)*3
+            self.triangle.colors = (1.0, 0.0, 0.0, 1.0)*3
         else:
-            self.triangle.colors = (1.0,)*9
-        if self.inline:
-            self.inline.hover(state)
-        if self.outline:
-            self.outline.hover(state)
+            self.triangle.colors = (1.0,)*12
 
     def draw(self):
         self.batch.draw()
-        if self.inline:
-            self.inline.draw()
-        if self.outline:
-            self.outline.draw()
 
     def checkhover(self, x, y):
-        #a, b: two vectors going from the lower tip of the triangle to the right or left edge
-        ax = -24.0#a = (-12, 12)
-        ay = 24.0
-        bx = 24.0#b = (12, 12)
-        by = 24.0
-        px = x-self.x#do some conversion to port the mouse coordinates into a coordinate system based on the tip of the triangle
-        py = y-self.y+12.0
-        r = (-py*bx/by+px)/(-ay*bx/by+ax)#calculate r and s values to represent the point by a and b
-        s = (px-r*ax)/bx
-        if r<1 and r>0 and s<1 and s>0 and (r+s)<1 and (r+s)>0:#standard point-in-triangle test
+        hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
+        if hover:
             self.hover(True)
+            lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
+            bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
+            righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+            if bottomhover:
+                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            if lefthover:
+                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            if righthover:
+                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
+            else:
+                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
             return True
         else:
             self.hover(False)
+            self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+            self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
             return False
 
 class Line:
@@ -153,6 +241,9 @@ class Line:
             self.endbox.hover(state)
 
 window = pyglet.window.Window()
+pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
+pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
+fpsdisplay = pyglet.clock.ClockDisplay()
 boxes = []
 drag = None
 dragline = False
@@ -166,6 +257,7 @@ def on_draw():
     window.clear()
     for box in boxes:
         box.draw()
+    fpsdisplay.draw()
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
