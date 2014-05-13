@@ -91,6 +91,7 @@ class AbstractorBox(Box):
         self.topline = None
         self.rightline = None
         self.bottomline = None
+        self.color = (1.0, 0.4, 0.8)
         Box.__init__(self, x, y)
         
     def get_vertices(self, centerx, centery):
@@ -105,19 +106,23 @@ class AbstractorBox(Box):
         self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
         self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
-                ('c4f', (1.0,)*12)
+                ('c4f', (0.0,)*12)
                 )
         self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (a.x, a.y, b.x, b.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
-                )
-        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                ('c4f', (self.color+(1.0,))*3)
                 )
         self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
+                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
+                ('c4f', (self.color+(1.0,))*3)
+                )
+        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (c.x, c.y, a.x, a.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                ('c4f', (self.color+(1.0,))*3)
+                )
+        self.glow = self.batch.add_indexed(6, pyglet.gl.GL_TRIANGLES, None, [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4, 2, 0, 5, 0, 3, 5],
+                ('v2f', (a.x+255, a.y-512 , b.x+255, b.y+255, c.x-512, c.y+255, a.x, a.y, b.x, b.y, c.x, c.y)),
+                ('c4f', (self.color+(0.0,))*3+(self.color+(1.0,))*3)
                 )
         self.leftattach = (x-12, y)
         self.topattach = (x, y+12)
@@ -136,28 +141,28 @@ class AbstractorBox(Box):
     def checkhover(self, x, y):
         hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
         if hover:
-            self.hover(True)
-            lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
-            bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
-            righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
-            if bottomhover:
-                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            if lefthover:
-                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            if righthover:
-                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+        #    self.hover(True)
+        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
+        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
+        #    righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+        #    if bottomhover:
+        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    if lefthover:
+        #        self.left_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.left_triangle.colors = (self.color+(1.0,))*3
+        #    if righthover:
+        #        self.right_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.right_triangle.colors = (self.color+(1.0,))*3
             return True
         else:
-            self.hover(False)
-            self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
+        #    self.hover(False)
+        #    self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    self.left_triangle.colors = (self.color+(1.0,))*3
+        #    self.right_triangle.colors = (self.color+(1.0,))*3
             return False
 
 class ApplicatorBox(Box):
@@ -166,6 +171,7 @@ class ApplicatorBox(Box):
         self.leftline = None
         self.rightline = None
         self.bottomline = None
+        self.color = (0.4, 1.0, 0.8)
         Box.__init__(self, x, y)
         
     def get_vertices(self, centerx, centery):
@@ -180,28 +186,27 @@ class ApplicatorBox(Box):
         self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
         self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
-                ('c4f', (1.0,)*12)
+                ('c4f', (0.0,)*12)
                 )
         self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (a.x, a.y, b.x, b.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                ('c4f', (self.color+(1.0,))*3)
                 )
         self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (b.x, b.y, c.x, c.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                ('c4f', (self.color+(1.0,))*3)
                 )
         self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
                 ('v2f', (c.x, c.y, a.x, a.y, x, y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
+                ('c4f', (self.color+(1.0,))*3)
                 )
         self.glow = self.batch.add_indexed(6, pyglet.gl.GL_TRIANGLES, None, [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4, 2, 0, 5, 0, 3, 5],
                 ('v2f', (a.x-255, a.y+512 , b.x-255, b.y-255, c.x+512, c.y-255, a.x, a.y, b.x, b.y, c.x, c.y)),
-                ('c4f', (1.0, 1.0, 1.0, 0.0)*3+(1.0, 1.0, 1.0, 1.0)*3)
+                ('c4f', (self.color+(0.0,))*3+(self.color+(1.0,))*3)
                 )
-        self.leftattach = (x-12, y)
-        self.topattach = (x, y+12)
-        self.bottomattach = (x, y-12)
-        self.rightattach = (0, 0)
+        self.leftattach = (b.x, y)
+        self.bottomattach = (x, b.y)
+        self.rightattach = (x+self.s1, y+self.s1)
 
     def hover(self, state=False):
         if state == True:
@@ -215,29 +220,41 @@ class ApplicatorBox(Box):
     def checkhover(self, x, y):
         hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
         if hover:
-            self.hover(True)
+        #    self.hover(True)
+        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
+        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
+        #    righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+        #    if bottomhover:
+        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    if lefthover:
+        #        self.left_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.left_triangle.colors = (self.color+(1.0,))*3
+        #    if righthover:
+        #        self.right_triangle.colors = (self.color+(1.0,))*3
+        #    else:
+        #        self.right_triangle.colors = (self.color+(1.0,))*3
+            return True
+        else:
+        #    self.hover(False)
+        #    self.bottom_triangle.colors = (self.color+(1.0,))*3
+        #    self.left_triangle.colors = (self.color+(1.0,))*3
+        #    self.right_triangle.colors = (self.color+(1.0,))*3
+            return False
+
+    def gethover(self, x, y):
+        if self.checkhover:
             lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
             bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
             righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
-            if bottomhover:
-                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
             if lefthover:
-                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            if righthover:
-                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.5)*3
-            else:
-                self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            return True
-        else:
-            self.hover(False)
-            self.bottom_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            self.left_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            self.right_triangle.colors = (1.0, 1.0, 1.0, 0.0)*3
-            return False
+                return self, self.leftattach
+            elif bottomhover:
+                return self, self.bottomattach
+            elif righthover:
+                return self, self.rightattach
 
 class Line:
 
@@ -308,17 +325,11 @@ def on_mouse_press(x, y, button, modifier):
         if button == pyglet.window.mouse.LEFT:
             dragline = False
         elif button == pyglet.window.mouse.RIGHT:
-            if modifier & pyglet.window.key.MOD_SHIFT:
-                line = Line(drag.rightattach, (x, y))
-                drag.aline = line
-            elif modifier & pyglet.window.key.MOD_CTRL:
-                line = Line(drag.bottomattach, (x, y))
-                drag.outline = line
-            else:
-                line = Line(drag.topattach, (x, y))
-                drag.inline = line
-            drag = line
-            dragline = True
+            attachpoint = drag.gethover(x, y)
+            if attachpoint:
+                line = Line(attachpoint, (x, y))
+                drag = line
+                dragline = True
     elif drag == None:
         if button == pyglet.window.mouse.LEFT:
             boxes.append(AbstractorBox(x, y))
