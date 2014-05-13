@@ -1,4 +1,6 @@
 import pyglet, math
+from pyglet.gl import *
+import shader
 
 class Vector:
 
@@ -192,6 +194,10 @@ class ApplicatorBox(Box):
                 ('v2f', (c.x, c.y, a.x, a.y, x, y)),
                 ('c4f', (1.0, 1.0, 1.0, 0.0)*3)
                 )
+        self.glow = self.batch.add_indexed(6, pyglet.gl.GL_TRIANGLES, None, [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4, 2, 0, 5, 0, 3, 5],
+                ('v2f', (a.x-255, a.y+512 , b.x-255, b.y-255, c.x+512, c.y-255, a.x, a.y, b.x, b.y, c.x, c.y)),
+                ('c4f', (1.0, 1.0, 1.0, 0.0)*3+(1.0, 1.0, 1.0, 1.0)*3)
+                )
         self.leftattach = (x-12, y)
         self.topattach = (x, y+12)
         self.bottomattach = (x, y-12)
@@ -263,6 +269,7 @@ class Line:
 window = pyglet.window.Window()
 pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
 pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
+windowshader = shader.Shader(' '.join(open('vertexshader.glsl')), ' '.join(open('fragmentshader.glsl')))
 fpsdisplay = pyglet.clock.ClockDisplay()
 boxes = []
 drag = None
@@ -275,8 +282,15 @@ def set_drag(box):
 @window.event
 def on_draw():
     window.clear()
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0., window.width, 0., window.height, 0., 1.)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    windowshader.bind()
     for box in boxes:
         box.draw()
+    windowshader.unbind()
     fpsdisplay.draw()
 
 @window.event
