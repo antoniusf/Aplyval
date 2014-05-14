@@ -2,7 +2,7 @@ import pyglet, math
 from pyglet.gl import *
 import shader
 
-class Vector:
+class vec2:
 
     def __init__(self, *args):
         """Takes coordinates either as a tuple or separate"""
@@ -12,13 +12,13 @@ class Vector:
         """Takes coordinates either as a tuple or separate"""
         if len(args) == 1:
             arg = args[0]
-            self.x = arg[0]
-            self.y = arg[1]
+            self.x = float(arg[0])
+            self.y = float(arg[1])
         elif len(args) == 2:
-            self.x = args[0]
-            self.y = args[1]
+            self.x = float(args[0])
+            self.y = float(args[1])
         else:
-            raise TypeError("Vector.__init__() takes either one or two arguments; "+len(args)+" given.")
+            raise TypeError("vec2.__init__() takes either one or two arguments; "+len(args)+" given.")
 
     def coords(self):
         return self.x, self.y
@@ -26,19 +26,25 @@ class Vector:
     def __add__(self, other):
         if type(other) == type(self):
             print "Hello"
-            t = Vector(self.x+other.x, self.y+other.y)
+            t = vec2(self.x+other.x, self.y+other.y)
             return None
         else:
             raise TypeError
 
     def __sub__(self, other):
         if type(other) == type(self):
-            return Vector(self.x-other.x, self.y-other.y)
+            return vec2(self.x-other.x, self.y-other.y)
         else:
             raise TypeError
 
+    def __mul__(self, other):
+        if type(other) == type(self):
+            return self.x*other.x+self.y*other.y
+        elif type(other) == float or type(other) == int:
+            return vec2(self.x*other, self.y*other)
+
     def __repr__(self):
-        return "Vector ("+str(self.x)+", "+str(self.y)+")"
+        return "vec2 ("+str(self.x)+", "+str(self.y)+")"
 
     def __getitem__(self, i):
         if i == 0:
@@ -99,7 +105,7 @@ class AbstractorBox(Box):
         right = centerx+self.s1
         bottom = centery-self.s2
         top = centery+self.s1
-        return Vector(right, bottom), Vector(right, top), Vector(left, top)
+        return vec2(right, bottom), vec2(right, top), vec2(left, top)
 
     def update(self, x, y):
         Box.update(self, x, y)
@@ -142,9 +148,9 @@ class AbstractorBox(Box):
         hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
         if hover:
         #    self.hover(True)
-        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
-        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
-        #    righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
+        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
+        #    righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
         #    if bottomhover:
         #        self.bottom_triangle.colors = (self.color+(1.0,))*3
         #    else:
@@ -165,6 +171,9 @@ class AbstractorBox(Box):
         #    self.right_triangle.colors = (self.color+(1.0,))*3
             return False
 
+    def drag_end(self, x, y):
+        pass
+
 class ApplicatorBox(Box):
 
     def __init__(self, x, y):
@@ -179,7 +188,7 @@ class ApplicatorBox(Box):
         right = centerx+self.s2
         bottom = centery-self.s1
         top = centery+self.s2
-        return Vector(left, top), Vector(left, bottom), Vector(right, bottom)
+        return vec2(left, top), vec2(left, bottom), vec2(right, bottom)
 
     def update(self, x, y):
         Box.update(self, x, y)
@@ -221,9 +230,9 @@ class ApplicatorBox(Box):
         hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
         if hover:
         #    self.hover(True)
-        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
-        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
-        #    righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
+        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
+        #    righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
         #    if bottomhover:
         #        self.bottom_triangle.colors = (self.color+(1.0,))*3
         #    else:
@@ -244,17 +253,82 @@ class ApplicatorBox(Box):
         #    self.right_triangle.colors = (self.color+(1.0,))*3
             return False
 
+    def highlight_triangle(self, triangle, state=False):
+        if state == True:
+            triangle.colors = ((1.0-self.color[0])*0.5+self.color[0], (1.0-self.color[1])*0.5+self.color[1], (1.0-self.color[2])*0.5+self.color[2], 1.0)*3
+        else:
+            triangle.colors = (self.color+(1.0,))*3
+
+
     def gethover(self, x, y):
         if self.checkhover:
-            lefthover = self.point_in_triangle(self.a, self.b-self.a, Vector(self.x, self.y)-self.a, x, y)
-            bottomhover = self.point_in_triangle(self.b, self.c-self.b, Vector(self.x, self.y)-self.b, x, y)
-            righthover = self.point_in_triangle(self.c, self.a-self.c, Vector(self.x, self.y)-self.c, x, y)
+            lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
+            bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
+            righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
             if lefthover:
+                self.highlight_triangle(self.left_triangle, True)
                 return self, self.leftattach
-            elif bottomhover:
+            else:
+                self.highlight_triangle(self.left_triangle, False)
+            if bottomhover:
+                self.highlight_triangle(self.bottom_triangle, True)
                 return self, self.bottomattach
-            elif righthover:
+            else:
+                self.highlight_triangle(self.bottom_triangle, False)
+            if righthover:
+                self.highlight_triangle(self.right_triangle, True)
                 return self, self.rightattach
+            else:
+                self.highlight_triangle(self.right_triangle, False)
+        else:
+            self.highlight_triangle(self.right_triangle, False)
+            self.highlight_triangle(self.bottom_triangle, False)
+            self.highlight_triangle(self.left_triangle, False)
+            righthover = self.rightline.gethover()
+            if righthover:
+                return righthover
+            else:
+                bottomhover = self.bottomline.gethover()
+                if bottomhover:
+                    return bottomhover
+                else:
+                    return False
+
+    def drag_end(self, x, y):
+        pass
+
+class Mulplicator:
+
+    def __init__(self, x, y, source):
+        self.halfwidth = 8
+        self.update(x, y)
+        self.source = source
+        self.sinks = []
+
+    def update(self, x, y):
+        self.x, self.y = x, y
+        left = x-self.halfwidth
+        right = x+self.halfwidth
+        bottom = y-self.halfwidth
+        top = y+self.halfwidth
+        self.batch = pyglet.graphics.Batch()
+        self.square = self.batch.add_indexed(4, pyglet.gl.GL_TRIANGLES, None, [0, 1, 2, 0, 2, 3],
+                ('v2f', (left, y, x, bottom, right, y, x, top)),
+                ('c4f', (0.5, 0.4, 1.0, 1.0)*4)
+                )
+        self.glow = self.batch.add_indexed(8, pyglet.gl.GL_TRIANGLES, None, [0, 1, 4, 4, 5, 1, 1, 2, 5, 5, 6, 2, 2, 3, 6, 6, 7, 3, 3, 0, 7, 7, 4, 0],
+                ('v2f', (left-256, y, x, bottom-256, right+256, y, x, top+256, left, y, x, bottom, right, y, x, top)),
+                ('c4f', (0.5, 0.4, 1.0, 0.0)*4+(0.5, 0.4, 1.0, 1.0)*4)
+                )
+
+    def draw(self):
+        self.batch.draw()
+
+    def drag_end(self, x, y):
+        pass
+
+    def checkhover(self, x, y):
+        pass
 
 class Line:
 
@@ -270,6 +344,12 @@ class Line:
     def update_end(self, x, y):
         self.ex = x
         self.ey = y
+
+    def update(self, x, y):
+        self.update_end(x, y)
+
+    def drag_end(self, x, y):
+        self.endbox = Mulplicator(x, y, self)
 
     def draw(self):
         if self.endbox:
@@ -290,7 +370,6 @@ windowshader = shader.Shader(' '.join(open('vertexshader.glsl')), ' '.join(open(
 fpsdisplay = pyglet.clock.ClockDisplay()
 boxes = []
 drag = None
-dragline = False
 
 def set_drag(box):
     global drag
@@ -308,12 +387,13 @@ def on_draw():
     for box in boxes:
         box.draw()
     windowshader.unbind()
-    fpsdisplay.draw()
+    #fpsdisplay.draw()
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
     for box in boxes:
         box.checkhover(x, y)
+        box.gethover(x, y)
 
 @window.event
 def on_mouse_press(x, y, button, modifier):
@@ -329,26 +409,26 @@ def on_mouse_press(x, y, button, modifier):
             if attachpoint:
                 line = Line(attachpoint, (x, y))
                 drag = line
-                dragline = True
     elif drag == None:
         if button == pyglet.window.mouse.LEFT:
             boxes.append(AbstractorBox(x, y))
         elif button == pyglet.window.mouse.RIGHT:
             boxes.append(ApplicatorBox(x, y))
+        elif button == pyglet.window.mouse.MIDDLE:
+            boxes.append(Mulplicator(x, y, None))
 
 @window.event
 def on_mouse_release(x, y, button, modifier):
     global drag
-    drag = None
+    if drag:
+        drag.drag_end(x, y)
+        drag = None
 
 @window.event
 def on_mouse_drag(x, y, dx, dy, symbol, modifier):
     global drag
     if drag:
-        if dragline == True:
-            drag.update_end(x, y)
-        else:
-            drag.update(x, y)
+        drag.update(x, y)
 
 @window.event
 def on_key_press(symbol, modifiers):
