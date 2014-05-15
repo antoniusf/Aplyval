@@ -1,6 +1,7 @@
 import pyglet, math
 from pyglet.gl import *
 import shader
+from triangle import Triangle
 
 class vec2:
 
@@ -88,7 +89,7 @@ class Box:
         self.batch = pyglet.graphics.Batch()
 
     def click(self, x, y):
-        if self.checkhover(x, y) == True:
+        if self.gethover(x, y):
             set_drag(self)
 
 class AbstractorBox(Box):
@@ -110,66 +111,33 @@ class AbstractorBox(Box):
     def update(self, x, y):
         Box.update(self, x, y)
         self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
-        self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
-                ('c4f', (0.0,)*12)
-                )
-        self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (a.x, a.y, b.x, b.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
-        self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
-        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (c.x, c.y, a.x, a.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
+        pos = vec2(x, y)
+        self.leftattach = (b.x, y)
+        self.bottomattach = (x, b.y)
+        self.rightattach = (x+self.s1, y+self.s1)
+        self.right_triangle = Triangle(a, b, pos, self.color, self.batch)
+        self.top_triangle = Triangle(b, c, pos, self.color, self.batch)
+        self.bottom_triangle = Triangle(c, a, pos, self.color, self.batch)
         self.glow = self.batch.add_indexed(6, pyglet.gl.GL_TRIANGLES, None, [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4, 2, 0, 5, 0, 3, 5],
                 ('v2f', (a.x+255, a.y-512 , b.x+255, b.y+255, c.x-512, c.y+255, a.x, a.y, b.x, b.y, c.x, c.y)),
                 ('c4f', (self.color+(0.0,))*3+(self.color+(1.0,))*3)
                 )
-        self.leftattach = (x-12, y)
-        self.topattach = (x, y+12)
-        self.bottomattach = (x, y-12)
-        self.rightattach = (0, 0)
-
-    def hover(self, state=False):
-        if state == True:
-            self.triangle.colors = (1.0, 0.0, 0.0, 1.0)*3
-        else:
-            self.triangle.colors = (1.0,)*12
+        self.topattach = (x, a.y)
+        self.bottomattach = (x-self.s1, y-self.s1)
+        self.rightattach = (a.x, y)
 
     def draw(self):
         self.batch.draw()
 
-    def checkhover(self, x, y):
-        hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
-        if hover:
-        #    self.hover(True)
-        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
-        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
-        #    righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
-        #    if bottomhover:
-        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    if lefthover:
-        #        self.left_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.left_triangle.colors = (self.color+(1.0,))*3
-        #    if righthover:
-        #        self.right_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.right_triangle.colors = (self.color+(1.0,))*3
-            return True
-        else:
-        #    self.hover(False)
-        #    self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    self.left_triangle.colors = (self.color+(1.0,))*3
-        #    self.right_triangle.colors = (self.color+(1.0,))*3
-            return False
+    def gethover(self, x, y):
+        hovered = False
+        if self.top_triangle.gethover(vec2(x, y)):
+            hovered = self, self.leftattach
+        if self.bottom_triangle.gethover(vec2(x, y)):
+            hovered = self, self.bottomattach
+        if self.right_triangle.gethover(vec2(x, y)):
+            hovered = self, self.rightattach
+        return hovered
 
     def drag_end(self, x, y):
         pass
@@ -192,23 +160,11 @@ class ApplicatorBox(Box):
 
     def update(self, x, y):
         Box.update(self, x, y)
+        pos = vec2(x, y)
         self.a, self.b, self.c = a, b, c = self.get_vertices(x, y)
-        self.triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (a.x, a.y, b.x, b.y, c.x, c.y)),
-                ('c4f', (0.0,)*12)
-                )
-        self.left_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (a.x, a.y, b.x, b.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
-        self.bottom_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (b.x, b.y, c.x, c.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
-        self.right_triangle = self.batch.add(3, pyglet.gl.GL_TRIANGLES, None,
-                ('v2f', (c.x, c.y, a.x, a.y, x, y)),
-                ('c4f', (self.color+(1.0,))*3)
-                )
+        self.left_triangle = Triangle(a, b, pos, self.color, self.batch)
+        self.bottom_triangle = Triangle(b, c, pos, self.color, self.batch)
+        self.right_triangle = Triangle(c, a, pos, self.color, self.batch)
         self.glow = self.batch.add_indexed(6, pyglet.gl.GL_TRIANGLES, None, [0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4, 2, 0, 5, 0, 3, 5],
                 ('v2f', (a.x-255, a.y+512 , b.x-255, b.y-255, c.x+512, c.y-255, a.x, a.y, b.x, b.y, c.x, c.y)),
                 ('c4f', (self.color+(0.0,))*3+(self.color+(1.0,))*3)
@@ -217,82 +173,18 @@ class ApplicatorBox(Box):
         self.bottomattach = (x, b.y)
         self.rightattach = (x+self.s1, y+self.s1)
 
-    def hover(self, state=False):
-        if state == True:
-            self.triangle.colors = (1.0, 0.0, 0.0, 1.0)*3
-        else:
-            self.triangle.colors = (1.0,)*12
-
     def draw(self):
         self.batch.draw()
 
-    def checkhover(self, x, y):
-        hover = self.point_in_triangle(self.a, self.b-self.a, self.c-self.a, x, y)
-        if hover:
-        #    self.hover(True)
-        #    lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
-        #    bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
-        #    righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
-        #    if bottomhover:
-        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    if lefthover:
-        #        self.left_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.left_triangle.colors = (self.color+(1.0,))*3
-        #    if righthover:
-        #        self.right_triangle.colors = (self.color+(1.0,))*3
-        #    else:
-        #        self.right_triangle.colors = (self.color+(1.0,))*3
-            return True
-        else:
-        #    self.hover(False)
-        #    self.bottom_triangle.colors = (self.color+(1.0,))*3
-        #    self.left_triangle.colors = (self.color+(1.0,))*3
-        #    self.right_triangle.colors = (self.color+(1.0,))*3
-            return False
-
-    def highlight_triangle(self, triangle, state=False):
-        if state == True:
-            triangle.colors = ((1.0-self.color[0])*0.5+self.color[0], (1.0-self.color[1])*0.5+self.color[1], (1.0-self.color[2])*0.5+self.color[2], 1.0)*3
-        else:
-            triangle.colors = (self.color+(1.0,))*3
-
-
     def gethover(self, x, y):
-        if self.checkhover:
-            lefthover = self.point_in_triangle(self.a, self.b-self.a, vec2(self.x, self.y)-self.a, x, y)
-            bottomhover = self.point_in_triangle(self.b, self.c-self.b, vec2(self.x, self.y)-self.b, x, y)
-            righthover = self.point_in_triangle(self.c, self.a-self.c, vec2(self.x, self.y)-self.c, x, y)
-            if lefthover:
-                self.highlight_triangle(self.left_triangle, True)
-                return self, self.leftattach
-            else:
-                self.highlight_triangle(self.left_triangle, False)
-            if bottomhover:
-                self.highlight_triangle(self.bottom_triangle, True)
-                return self, self.bottomattach
-            else:
-                self.highlight_triangle(self.bottom_triangle, False)
-            if righthover:
-                self.highlight_triangle(self.right_triangle, True)
-                return self, self.rightattach
-            else:
-                self.highlight_triangle(self.right_triangle, False)
-        else:
-            self.highlight_triangle(self.right_triangle, False)
-            self.highlight_triangle(self.bottom_triangle, False)
-            self.highlight_triangle(self.left_triangle, False)
-            righthover = self.rightline.gethover()
-            if righthover:
-                return righthover
-            else:
-                bottomhover = self.bottomline.gethover()
-                if bottomhover:
-                    return bottomhover
-                else:
-                    return False
+        hovered = False
+        if self.left_triangle.gethover(vec2(x, y)):
+            hovered = self, self.leftattach
+        if self.bottom_triangle.gethover(vec2(x, y)):
+            hovered = self, self.bottomattach
+        if self.right_triangle.gethover(vec2(x, y)):
+            hovered = self, self.rightattach
+        return hovered
 
     def drag_end(self, x, y):
         pass
@@ -392,7 +284,6 @@ def on_draw():
 @window.event
 def on_mouse_motion(x, y, dx, dy):
     for box in boxes:
-        box.checkhover(x, y)
         box.gethover(x, y)
 
 @window.event
