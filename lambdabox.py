@@ -175,16 +175,42 @@ class ApplicatorBox(Box):
 
     def draw(self):
         self.batch.draw()
+        if self.rightline:
+            self.rightline.draw()
+        if self.leftline:
+            self.leftline.draw()
 
     def gethover(self, x, y):
         hovered = False
-        if self.left_triangle.gethover(vec2(x, y)):
-            hovered = self, self.leftattach
-        if self.bottom_triangle.gethover(vec2(x, y)):
-            hovered = self, self.bottomattach
-        if self.right_triangle.gethover(vec2(x, y)):
-            hovered = self, self.rightattach
+        if x > self.a.x and x < self.c.x and y > self.b.y and y < self.a.y: #bounding box check
+            if self.left_triangle.gethover(vec2(x, y)):
+                hovered = self, self.leftattach
+            if self.bottom_triangle.gethover(vec2(x, y)):
+                hovered = self, self.bottomattach
+            if self.right_triangle.gethover(vec2(x, y)):
+                hovered = self, self.rightattach
+        else:
+            self.left_triangle.highlight(False)
+            self.bottom_triangle.highlight(False)
+            self.right_triangle.highlight(False)
         return hovered
+
+    def gethover_recursive(self, x, y):
+        hovered = self.gethover(x, y)
+        if hovered:
+            return hovered
+        else:
+            if self.rightline:
+                rightline_hover = self.rightline.gethover_recursive(x, y)
+                if rightline_hover:
+                    return rightline_hover
+                else:
+                    if self.leftline:
+                        leftline_hover = self.leftline.gethover_recursive(x, y)
+                        if leftline_hover:
+                            return leftline_hover
+                        else:
+                            return False
 
     def drag_end(self, x, y):
         pass
@@ -224,9 +250,9 @@ class Mulplicator:
 
 class Line:
 
-    def __init__(self, start, end):
-        self.sx, self.sy = start
-        self.ex, self.ey = end
+    def __init__(self, inpoint, outpoint):
+        self.inpoint = inpoint
+        self.outpoint = outpoint
         self.endbox = None
 
     def update_start(self, x, y):
@@ -260,6 +286,7 @@ pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
 pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
 windowshader = shader.Shader(' '.join(open('vertexshader.glsl')), ' '.join(open('fragmentshader.glsl')))
 fpsdisplay = pyglet.clock.ClockDisplay()
+entities = pyglet.text.Label(text="0", font_size=18, font_name="Monospace", x=0, y=window.height, anchor_x="left", anchor_y="top")
 boxes = []
 drag = None
 
@@ -279,7 +306,8 @@ def on_draw():
     for box in boxes:
         box.draw()
     windowshader.unbind()
-    #fpsdisplay.draw()
+    fpsdisplay.draw()
+    entities.draw()
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
@@ -290,23 +318,30 @@ def on_mouse_motion(x, y, dx, dy):
 def on_mouse_press(x, y, button, modifier):
     global dragline
     global drag
+    hover = None
+    boxes.reverse()
     for box in boxes:
-        box.click(x, y)
-    if drag:
+        hover = box.gethover(x, y)
+        if hover:
+            break
+    boxes.reverse()
+    if hover:
+        drag = hover[0]
         if button == pyglet.window.mouse.LEFT:
             dragline = False
         elif button == pyglet.window.mouse.RIGHT:
-            attachpoint = drag.gethover(x, y)
+            attachpoint = hover[1]
             if attachpoint:
                 line = Line(attachpoint, (x, y))
                 drag = line
-    elif drag == None:
+    elif hover == None:
         if button == pyglet.window.mouse.LEFT:
             boxes.append(AbstractorBox(x, y))
         elif button == pyglet.window.mouse.RIGHT:
             boxes.append(ApplicatorBox(x, y))
         elif button == pyglet.window.mouse.MIDDLE:
             boxes.append(Mulplicator(x, y, None))
+    entities.text = str(len(boxes))
 
 @window.event
 def on_mouse_release(x, y, button, modifier):
